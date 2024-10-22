@@ -61,6 +61,26 @@ async def on_message(message):
         await message.channel.send(f"このチャンネルはトークン '{token}' にリンクされました。")
         return
 
+    # チャンネルIDを削除するコマンド "/delete <トークン名>"
+    if message.content.startswith('/delete '):
+        token = message.content.split()[1]  # トークンを取得
+        if token in token_channels:
+            # 登録されたチャンネルを取得
+            channels = token_channels[token]
+            
+            # SupabaseからチャンネルIDを削除
+            for channel in channels:
+                supabase.table('token_channels').delete().eq('token', token).eq('channel_id', str(channel.id)).execute()
+                print(f"チャンネル {channel.id} をトークン '{token}' から削除しました。")
+            
+            # メモリ上のデータも削除
+            del token_channels[token]
+
+            await message.channel.send(f"トークン '{token}' に関連付けられた全チャンネルが削除されました。")
+        else:
+            await message.channel.send(f"トークン '{token}' は登録されていません。")
+        return
+
     # メッセージを転送する処理
     for token, channels in token_channels.items():
         print(f"トークン '{token}' に関連するチャンネルをチェックしています: {[channel.id for channel in channels]}")
@@ -93,6 +113,6 @@ async def on_message(message):
 
     # デバッグ用に、受信したチャンネルIDを表示
     print(f"チャンネル {message.channel.id} でメッセージを受信しました。")
-
+    
 # ボットの実行
 client.run(TOKEN)
